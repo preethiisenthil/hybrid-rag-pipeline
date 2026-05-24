@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAGMind — Document Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:      #0f0e0c;
+  --paper:    #f5f0e8;
+  --cream:    #ede7d9;
+  --warm:     #e8dfc8;
+  --border:   #c8bfa8;
+  --border2:  #a89880;
+  --accent:   #c84b2f;
+  --accent2:  #e05a35;
+  --gold:     #c49a2a;
+  --green:    #2a7a4b;
+  --muted:    #6b6050;
+  --dim:      #9a8e7c;
+  --display:  'Playfair Display', serif;
+  --mono:     'DM Mono', monospace;
+  --body:     'DM Sans', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Subtle grain texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* ── Layout ── */
+.shell {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+}
+
+/* ── Masthead ── */
+.masthead {
+  grid-column: 1 / -1;
+  border-bottom: 3px solid var(--ink);
+  padding: 0 32px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 24px;
+  background: var(--paper);
+}
+
+.masthead-left {
+  padding: 18px 0;
+  border-right: 1px solid var(--border);
+  padding-right: 32px;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.wordmark {
+  font-family: var(--display);
+  font-size: 38px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.wordmark span { color: var(--accent); }
+
+.masthead-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 0 32px;
+  border-right: 1px solid var(--border);
+}
+
+.stat-block {
+  text-align: center;
+}
+
+.stat-num {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.stat-num.accent { color: var(--accent); }
+
+.stat-lbl {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-top: 3px;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--border);
+}
+
+.masthead-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 0;
+}
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid var(--ink);
+  padding: 4px 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.status-tag.live { border-color: var(--green); color: var(--green); }
+.status-tag.live::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.model-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 5px 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 2px solid var(--ink);
+  background: var(--cream);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-block {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.block-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.block-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--border2);
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--warm);
+  position: relative;
+  overflow: hidden;
+}
+
+.drop-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s;
+  opacity: 0.05;
+}
+
+.drop-zone:hover::before, .drop-zone.drag::before { transform: scaleX(1); }
+.drop-zone:hover, .drop-zone.drag { border-color: var(--accent); }
+
+input[type="file"] { display: none; }
+
+.drop-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  display: block;
+  transition: transform 0.2s;
+}
+
+.drop-zone:hover .drop-icon { transform: translateY(-3px); }
+
+.drop-text {
+  font-family: var(--body);
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.drop-text strong { color: var(--ink); font-weight: 500; }
+
+.drop-formats {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--dim);
+  margin-top: 6px;
+}
+
+.progress-bar {
+  height: 3px;
+  background: var(--border);
+  margin-top: 10px;
+  display: none;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  animation: prog 1.5s ease-in-out infinite;
+}
+
+@keyframes prog {
+  0%   { width: 0%;   margin-left: 0; }
+  50%  { width: 60%;  margin-left: 20%; }
+  100% { width: 0%;   margin-left: 100%; }
+}
+
+/* Textarea */
+.paste-area {
+  width: 100%;
+  background: var(--warm);
+  border: 1.5px solid var(--border);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 13px;
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 80px;
+  outline: none;
+  transition: border-color 0.2s;
+  line-height: 1.5;
+}
+
+.paste-area:focus { border-color: var(--ink); }
+
+.source-input {
+  width: 100%;
+  background: var(--warm);
+  border: 1.5px solid var(--border);
+  border-top: none;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 7px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.source-input:focus { border-color: var(--ink); }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  padding: 9px 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.btn:hover { background: var(--accent); }
+.btn:disabled { background: var(--dim); cursor: not-allowed; }
+
+.btn-outline {
+  background: transparent;
+  border: 1.5px solid var(--border2);
+  color: var(--muted);
+}
+
+.btn-outline:hover { border-color: var(--ink); color: var(--ink); background: transparent; }
+
+/* Sources list */
+.sources-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.source-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--warm);
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.source-ico { font-size: 13px; flex-shrink: 0; }
+.source-nm { flex: 1; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 11px; }
+.source-ct { font-family: var(--mono); font-size: 10px; color: var(--dim); flex-shrink: 0; }
+
+/* Log */
+.log-block {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.log-scroll {
+  flex: 1;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.6;
+  max-height: 140px;
+}
+
+.log-line { padding: 1px 0; }
+.log-line.ok   { color: var(--green); }
+.log-line.info { color: var(--accent); }
+.log-line.warn { color: var(--gold); }
+.log-line.err  { color: #c0392b; }
+.log-line.dim  { color: var(--dim); }
+
+/* ── Main area ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+/* Query section */
+.query-section {
+  padding: 24px 32px 20px;
+  border-bottom: 2px solid var(--ink);
+  background: var(--cream);
+}
+
+.query-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.query-field-wrap { flex: 1; }
+
+.query-field-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-bottom: 6px;
+}
+
+.query-field {
+  width: 100%;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 17px;
+  padding: 11px 16px;
+  outline: none;
+  transition: border-color 0.15s;
+  font-weight: 400;
+}
+
+.query-field:focus { border-color: var(--accent); }
+.query-field::placeholder { color: var(--dim); font-style: italic; }
+
+/* Mode selector */
+.mode-wrap { flex-shrink: 0; }
+
+.mode-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-bottom: 6px;
+}
+
+.mode-group {
+  display: flex;
+  border: 2px solid var(--ink);
+}
+
+.mode-opt {
+  padding: 8px 14px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: none;
+  background: var(--paper);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  border-right: 1px solid var(--border);
+}
+
+.mode-opt:last-child { border-right: none; }
+.mode-opt.active { background: var(--ink); color: var(--paper); }
+.mode-opt:hover:not(.active) { background: var(--warm); color: var(--ink); }
+
+/* Ask button */
+.ask-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: #fff;
+  border: 2px solid var(--accent);
+  padding: 11px 26px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.ask-btn:hover { background: var(--ink); border-color: var(--ink); }
+.ask-btn:disabled { background: var(--dim); border-color: var(--dim); cursor: not-allowed; }
+
+/* Pipeline trace bar */
+.trace-bar {
+  display: flex;
+  align-items: center;
+  padding: 10px 32px;
+  border-bottom: 1px solid var(--border);
+  gap: 4px;
+  background: var(--warm);
+  overflow-x: auto;
+}
+
+.trace-step {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--dim);
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+.trace-step.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(200,75,47,0.06);
+}
+
+.trace-step.done { color: var(--green); }
+.trace-step .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.trace-arrow { color: var(--border2); font-size: 12px; flex-shrink: 0; }
+
+/* Results area */
+.results-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Empty state */
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 60px;
+  text-align: center;
+}
+
+.empty-headline {
+  font-family: var(--display);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+  max-width: 420px;
+}
+
+.empty-body {
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 380px;
+}
+
+.empty-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  max-width: 460px;
+}
+
+.empty-chip {
+  background: var(--warm);
+  border: 1.5px solid var(--border);
+  padding: 7px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-style: italic;
+}
+
+.empty-chip:hover { border-color: var(--accent); color: var(--ink); background: var(--cream); }
+
+/* Answer card */
+.answer-card {
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  animation: appear 0.35s ease;
+}
+
+@keyframes appear {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.answer-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.answer-card-q {
+  font-family: var(--display);
+  font-size: 15px;
+  font-style: italic;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.answer-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: rgba(245,240,232,0.6);
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.mode-pill {
+  background: var(--accent);
+  color: #fff;
+  padding: 2px 8px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.answer-body {
+  padding: 22px 20px;
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--ink);
+  white-space: pre-wrap;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Chunks */
+.chunks-header {
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--cream);
+}
+
+.chunks-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.chunks-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--border);
+  color: var(--muted);
+  padding: 1px 7px;
+}
+
+.chunks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0;
+  padding: 12px 20px;
+  gap: 10px;
+  background: var(--cream);
+}
+
+.chunk-card {
+  background: var(--warm);
+  border: 1px solid var(--border);
+  padding: 12px;
+  opacity: 0;
+  animation: fadeIn 0.25s ease forwards;
+}
+
+@keyframes fadeIn { to { opacity: 1; } }
+
+.chunk-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.chunk-ref {
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--accent);
+  color: #fff;
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.chunk-pg {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--dim);
+}
+
+.chunk-src {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chunk-txt {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Spinner */
+.spin {
+  width: 12px; height: 12px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: rot 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes rot { to { transform: rotate(360deg); } }
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Masthead -->
+  <header class="masthead">
+    <div class="masthead-left">
+      <div class="eyebrow">Production RAG System</div>
+      <div class="wordmark">RAG<span>Mind</span></div>
+    </div>
+    <div class="masthead-center">
+      <div class="stat-block">
+        <div class="stat-num accent" id="s-chunks">0</div>
+        <div class="stat-lbl">Chunks Indexed</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-block">
+        <div class="stat-num" id="s-sources">0</div>
+        <div class="stat-lbl">Documents</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-block">
+        <div class="stat-num" id="s-latency">—</div>
+        <div class="stat-lbl">Last Query (s)</div>
+      </div>
+    </div>
+    <div class="masthead-right">
+      <div class="model-tag" id="model-tag">mistral · ollama</div>
+      <div class="status-tag live" id="status-tag">● online</div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <!-- PDF Upload -->
+    <div class="sidebar-block">
+      <div class="block-label">Upload Document</div>
+      <div class="drop-zone" id="drop-zone"
+           onclick="document.getElementById('file-inp').click()"
+           ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragleave="onDragLeave()">
+        <input type="file" id="file-inp" accept=".pdf,.txt" onchange="onFileChange(event)">
+        <span class="drop-icon">📄</span>
+        <div class="drop-text"><strong>Click or drag & drop</strong><br>PDF or plain text files</div>
+        <div class="drop-formats">Supported: .pdf · .txt</div>
+        <div class="progress-bar" id="upload-prog"><div class="progress-fill"></div></div>
+      </div>
+    </div>
+
+    <!-- Text paste -->
+    <div class="sidebar-block">
+      <div class="block-label">Paste Text</div>
+      <textarea class="paste-area" id="paste-text" placeholder="Paste any text content here..."></textarea>
+      <input class="source-input" type="text" id="paste-source" placeholder="label-for-this-text.txt">
+      <button class="btn" onclick="doIngestText()">⬇ Ingest Text</button>
+    </div>
+
+    <!-- Ingested sources -->
+    <div class="sidebar-block" style="flex:1; overflow:hidden; display:flex; flex-direction:column;">
+      <div class="block-label">Knowledge Base</div>
+      <div class="sources-list" id="sources-list">
+        <div style="font-size:12px;color:var(--dim);padding:8px;font-style:italic;">No documents yet</div>
+      </div>
+      <button class="btn btn-outline" style="margin-top:10px" onclick="doReset()">✕ Clear All</button>
+    </div>
+
+    <!-- Log -->
+    <div class="log-block">
+      <div class="block-label">System Log</div>
+      <div class="log-scroll" id="log">
+        <div class="log-line dim">Initialising RAGMind...</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Query -->
+    <div class="query-section">
+      <div class="query-row">
+        <div class="query-field-wrap">
+          <div class="query-field-label">Ask your documents</div>
+          <input class="query-field" type="text" id="q-input"
+                 placeholder="What does this document say about…?"
+                 onkeydown="if(event.key==='Enter') doQuery()">
+        </div>
+
+        <div class="mode-wrap">
+          <div class="mode-label">Retrieval Mode</div>
+          <div class="mode-group">
+            <button class="mode-opt" id="m-semantic" onclick="setMode('semantic')">Semantic</button>
+            <button class="mode-opt active" id="m-hybrid"  onclick="setMode('hybrid')">Hybrid ✦</button>
+            <button class="mode-opt" id="m-bm25"    onclick="setMode('bm25')">BM25</button>
+          </div>
+        </div>
+
+        <button class="ask-btn" id="ask-btn" onclick="doQuery()">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+            <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/>
+            <path d="m11 11 3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          Search
+        </button>
+      </div>
+    </div>
+
+    <!-- Pipeline trace -->
+    <div class="trace-bar">
+      <div class="trace-step" id="t0"><span class="dot"></span>Embed Query</div>
+      <div class="trace-arrow">→</div>
+      <div class="trace-step" id="t1"><span class="dot"></span>FAISS Search</div>
+      <div class="trace-arrow">→</div>
+      <div class="trace-step" id="t2"><span class="dot"></span>BM25 Search</div>
+      <div class="trace-arrow">→</div>
+      <div class="trace-step" id="t3"><span class="dot"></span>RRF Fusion</div>
+      <div class="trace-arrow">→</div>
+      <div class="trace-step" id="t4"><span class="dot"></span>Mistral Generate</div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-area" id="results">
+      <div class="empty" id="empty">
+        <div class="empty-headline">Ask anything about your documents</div>
+        <div class="empty-body">Upload a PDF or paste text on the left. Hybrid retrieval combines dense semantic search with BM25 keyword matching for best accuracy.</div>
+        <div class="empty-chips">
+          <div class="empty-chip" onclick="setQ('Summarise the main points')">Summarise the main points</div>
+          <div class="empty-chip" onclick="setQ('What are the key findings?')">What are the key findings?</div>
+          <div class="empty-chip" onclick="setQ('List all important dates mentioned')">List all important dates</div>
+          <div class="empty-chip" onclick="setQ('What recommendations are made?')">What recommendations are made?</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const API  = 'http://127.0.0.1:8000';
+let mode   = 'hybrid';
+let trTmr  = null;
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+window.onload = async () => {
+  await refreshStats();
+  log('ok', 'RAGMind connected to server');
+};
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function refreshStats() {
+  try {
+    const d = await apiFetch('/stats');
+    document.getElementById('s-chunks').textContent  = d.total_chunks;
+    document.getElementById('s-sources').textContent = d.total_sources;
+    document.getElementById('model-tag').textContent = `${d.llm_model} · ollama`;
+    document.getElementById('status-tag').textContent = '● online';
+    renderSources(d.sources);
+  } catch {
+    document.getElementById('status-tag').textContent = '✕ offline';
+    document.getElementById('status-tag').style.borderColor = '#c0392b';
+    document.getElementById('status-tag').style.color = '#c0392b';
+    log('err', 'Cannot reach server on port 8000');
+  }
+}
+
+function renderSources(sources) {
+  const el = document.getElementById('sources-list');
+  const entries = Object.entries(sources);
+  if (!entries.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--dim);padding:8px;font-style:italic;">No documents yet</div>';
+    return;
+  }
+  el.innerHTML = entries.map(([name, count]) => `
+    <div class="source-row">
+      <span class="source-ico">${name.endsWith('.pdf') ? '📄' : '📝'}</span>
+      <span class="source-nm" title="${esc(name)}">${esc(name)}</span>
+      <span class="source-ct">${count} chunks</span>
+    </div>
+  `).join('');
+}
+
+// ── Mode ──────────────────────────────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  ['semantic','hybrid','bm25'].forEach(x =>
+    document.getElementById(`m-${x}`).classList.toggle('active', x === m)
+  );
+  document.getElementById('t2').style.opacity = m === 'semantic' ? '0.3' : '1';
+  document.getElementById('t3').style.opacity = m !== 'hybrid'   ? '0.3' : '1';
+}
+
+function setQ(q) {
+  document.getElementById('q-input').value = q;
+  doQuery();
+}
+
+// ── File upload ───────────────────────────────────────────────────────────────
+function onDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag'); }
+function onDragLeave()  { document.getElementById('drop-zone').classList.remove('drag'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) uploadFile(f);
+}
+function onFileChange(e) {
+  const f = e.target.files[0];
+  if (f) uploadFile(f);
+}
+
+async function uploadFile(file) {
+  document.getElementById('upload-prog').style.display = 'block';
+  log('info', `Uploading ${file.name} (${(file.size/1024).toFixed(0)} KB)…`);
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const d = await apiFetch('/ingest/file', { method:'POST', body: form });
+    log('ok', `${file.name} → ${d.chunks_added} chunks added · total ${d.total_chunks}`);
+    await refreshStats();
+  } catch(e) {
+    log('err', `Upload failed: ${e.message}`);
+  }
+  document.getElementById('upload-prog').style.display = 'none';
+  document.getElementById('file-inp').value = '';
+}
+
+// ── Text ingest ───────────────────────────────────────────────────────────────
+async function doIngestText() {
+  const text   = document.getElementById('paste-text').value.trim();
+  const source = document.getElementById('paste-source').value.trim() || 'manual.txt';
+  if (!text) { log('warn', 'No text to ingest'); return; }
+  log('info', `Ingesting "${source}"…`);
+  try {
+    const d = await apiFetch('/ingest/text', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text, source})
+    });
+    log('ok', `${d.chunks_added} chunks added · total ${d.total_chunks}`);
+    document.getElementById('paste-text').value   = '';
+    document.getElementById('paste-source').value = '';
+    await refreshStats();
+  } catch(e) { log('err', e.message); }
+}
+
+// ── Query ─────────────────────────────────────────────────────────────────────
+async function doQuery() {
+  const q = document.getElementById('q-input').value.trim();
+  if (!q) return;
+
+  const btn = document.getElementById('ask-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin"></div> Thinking…';
+  document.getElementById('empty')?.remove();
+
+  startTrace();
+  log('info', `Query [${mode}]: "${q}"`);
+  const t0 = performance.now();
+
+  try {
+    const d = await apiFetch('/query', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({question: q, mode, top_k: 6})
+    });
+    const elapsed = ((performance.now()-t0)/1000).toFixed(2);
+    stopTrace();
+    renderAnswer(d, q, elapsed);
+    document.getElementById('s-latency').textContent = elapsed;
+    log('ok', `Answer ready · ${d.latency_s}s · ${d.chunks.length} chunks · ${d.sources.join(', ')}`);
+  } catch(e) {
+    stopTrace();
+    log('err', `Query failed: ${e.message}`);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/><path d="m11 11 3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg> Search`;
+}
+
+function renderAnswer(d, q, elapsed) {
+  const div = document.createElement('div');
+  div.className = 'answer-card';
+  div.innerHTML = `
+    <div class="answer-card-header">
+      <div class="answer-card-q">"${esc(q)}"</div>
+      <div class="answer-card-meta">
+        <span class="mode-pill">${d.mode}</span>
+        <span>⏱ ${d.latency_s}s</span>
+        <span>${d.sources.map(esc).join(', ')}</span>
+      </div>
+    </div>
+    <div class="answer-body">${esc(d.answer)}</div>
+    <div class="chunks-header">
+      <span class="chunks-label">Retrieved Context</span>
+      <span class="chunks-count">${d.chunks.length} chunks</span>
+    </div>
+    <div class="chunks-grid">
+      ${d.chunks.map((c,i) => `
+        <div class="chunk-card" style="animation-delay:${i*50}ms">
+          <div class="chunk-top">
+            <div class="chunk-ref">${c.idx}</div>
+            <div class="chunk-pg">p.${c.page}</div>
+          </div>
+          <div class="chunk-src">${esc(c.source)}</div>
+          <div class="chunk-txt">${esc(c.text)}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  const results = document.getElementById('results');
+  results.insertBefore(div, results.firstChild);
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+async function doReset() {
+  if (!confirm('Clear all documents and vectors?')) return;
+  try {
+    await apiFetch('/reset', {method:'DELETE'});
+    log('warn', 'Knowledge base cleared');
+    document.getElementById('results').innerHTML = `<div class="empty" id="empty">
+      <div class="empty-headline">Knowledge base cleared</div>
+      <div class="empty-body">Upload new documents to continue.</div>
+    </div>`;
+    await refreshStats();
+  } catch(e) { log('err', e.message); }
+}
+
+// ── Trace animation ───────────────────────────────────────────────────────────
+function startTrace() {
+  let i = 0;
+  clearInterval(trTmr);
+  trTmr = setInterval(() => {
+    [0,1,2,3,4].forEach(n => {
+      const el = document.getElementById(`t${n}`);
+      el.className = n < i ? 'trace-step done' : n === i ? 'trace-step active' : 'trace-step';
+    });
+    i = (i+1) % 6;
+  }, 450);
+}
+
+function stopTrace() {
+  clearInterval(trTmr);
+  [0,1,2,3,4].forEach(n => document.getElementById(`t${n}`).className = 'trace-step');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+async function apiFetch(path, opts={}) {
+  const r = await fetch(API + path, opts);
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({detail: r.statusText}));
+    throw new Error(e.detail || r.statusText);
+  }
+  return r.json();
+}
+
+function log(type, msg) {
+  const el = document.getElementById('log');
+  const ts = new Date().toLocaleTimeString('en-US',{hour12:false});
+  el.innerHTML += `<div class="log-line ${type}">${ts} ${esc(msg)}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
