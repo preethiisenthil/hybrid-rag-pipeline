@@ -122,7 +122,7 @@ FAISS returns cosine scores (0–1). BM25 returns TF-IDF scores (unbounded). The
 
 ---
 
-## Interview Talking Points
+FAQ
 
 **Q: Why use both FAISS and ChromaDB?**
 FAISS is in-process (fastest possible search, ~1ms) but volatile — it's lost on restart. ChromaDB persists to disk automatically. Using both gives speed and durability.
